@@ -1,5 +1,14 @@
 import SwiftUI
 
+/// A colour with alpha that follows the Mac's light or dark appearance.
+func clayColor(light: (CGFloat, CGFloat, CGFloat, CGFloat), dark: (CGFloat, CGFloat, CGFloat, CGFloat)) -> Color {
+    Color(nsColor: NSColor(name: nil) { appearance in
+        let isDark = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        let c = isDark ? dark : light
+        return NSColor(red: c.0, green: c.1, blue: c.2, alpha: c.3)
+    })
+}
+
 /// A colour that follows the Mac's light or dark appearance.
 func adaptive(light: (CGFloat, CGFloat, CGFloat), dark: (CGFloat, CGFloat, CGFloat)) -> Color {
     Color(nsColor: NSColor(name: nil) { appearance in
@@ -11,12 +20,14 @@ func adaptive(light: (CGFloat, CGFloat, CGFloat), dark: (CGFloat, CGFloat, CGFlo
 
 /// Colours used across the app, matching the browser dashboard.
 enum Style {
-    static let panelTop = adaptive(light: (0.98, 0.98, 0.99), dark: (0.17, 0.19, 0.22))
-    static let panelBottom = adaptive(light: (0.92, 0.93, 0.95), dark: (0.10, 0.11, 0.14))
-    static let windowTop = adaptive(light: (0.93, 0.94, 0.96), dark: (0.23, 0.25, 0.29))
-    static let windowBottom = adaptive(light: (0.85, 0.86, 0.90), dark: (0.14, 0.15, 0.18))
-    static let headerTop = adaptive(light: (0.99, 0.99, 1.00), dark: (0.29, 0.31, 0.36))
-    static let headerBottom = adaptive(light: (0.90, 0.91, 0.94), dark: (0.17, 0.19, 0.23))
+    static let clayCard = clayColor(light: (0.96, 0.97, 1.00, 1), dark: (0.15, 0.17, 0.26, 1))
+    static let clayShadowDark = clayColor(light: (0.64, 0.67, 0.80, 0.55), dark: (0.00, 0.00, 0.00, 0.60))
+    static let clayShadowLight = clayColor(light: (1.00, 1.00, 1.00, 0.95), dark: (0.35, 0.38, 0.52, 0.30))
+    static let clayRim = clayColor(light: (1.00, 1.00, 1.00, 0.70), dark: (1.00, 1.00, 1.00, 0.06))
+    static let windowTop = adaptive(light: (0.78, 0.84, 1.00), dark: (0.13, 0.14, 0.20))
+    static let windowBottom = adaptive(light: (0.90, 0.80, 0.98), dark: (0.11, 0.12, 0.17))
+    static let blobCool = adaptive(light: (0.66, 0.70, 1.00), dark: (0.20, 0.19, 0.36))
+    static let blobWarm = adaptive(light: (1.00, 0.74, 0.86), dark: (0.30, 0.17, 0.26))
     static let ink = adaptive(light: (0.12, 0.13, 0.16), dark: (0.85, 0.87, 0.90))
     static let muted = adaptive(light: (0.40, 0.43, 0.49), dark: (0.50, 0.53, 0.58))
     static let screen = Color(red: 0.03, green: 0.07, blue: 0.05)
@@ -32,7 +43,7 @@ enum Style {
     static let green = Color(red: 0.22, green: 1.0, blue: 0.48)
 }
 
-/// A brushed-metal panel with four corner screws.
+/// A claymorphic card: soft rounded shape with a light rim and a shadow on each side.
 struct Panel<Content: View>: View {
     let title: String
     @ViewBuilder var content: Content
@@ -41,30 +52,27 @@ struct Panel<Content: View>: View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title.uppercased())
                 .font(.system(size: 11, weight: .bold, design: .monospaced))
-                .tracking(2.5)
+                .tracking(2)
                 .foregroundStyle(Style.muted)
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .padding(16)
+        .padding(18)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(
-            LinearGradient(colors: [Style.panelTop, Style.panelBottom], startPoint: .top, endPoint: .bottom)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(.white.opacity(0.08)))
-        .overlay(alignment: .topLeading) { Screw().padding(8) }
-        .overlay(alignment: .topTrailing) { Screw().padding(8) }
-        .shadow(color: .black.opacity(0.45), radius: 10, y: 6)
+        .background(ClayShape(radius: 28))
     }
 }
 
-private struct Screw: View {
+/// The clay surface itself, drawn as a background so only the shape casts shadows, not the text.
+struct ClayShape: View {
+    let radius: CGFloat
+
     var body: some View {
-        Circle()
-            .fill(RadialGradient(colors: [Color(white: 0.85), Color(white: 0.4), Color(white: 0.17)],
-                                 center: UnitPoint(x: 0.35, y: 0.35), startRadius: 0, endRadius: 6))
-            .frame(width: 8, height: 8)
+        RoundedRectangle(cornerRadius: radius)
+            .fill(Style.clayCard)
+            .overlay(RoundedRectangle(cornerRadius: radius).strokeBorder(Style.clayRim, lineWidth: 1.5))
+            .shadow(color: Style.clayShadowDark, radius: 12, x: 8, y: 10)
+            .shadow(color: Style.clayShadowLight, radius: 10, x: -7, y: -7)
     }
 }
 

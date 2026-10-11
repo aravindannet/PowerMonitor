@@ -103,8 +103,15 @@ struct ContentView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .frame(minWidth: 1100, minHeight: 880)
         .background(
-            LinearGradient(colors: [Style.windowTop, Style.windowBottom],
-                           startPoint: .topLeading, endPoint: .bottomTrailing)
+            ZStack {
+                LinearGradient(colors: [Style.windowTop, Style.windowBottom],
+                               startPoint: .topLeading, endPoint: .bottomTrailing)
+                RadialGradient(colors: [Style.blobCool, .clear], center: .topLeading,
+                               startRadius: 0, endRadius: 620)
+                RadialGradient(colors: [Style.blobWarm, .clear], center: .bottomTrailing,
+                               startRadius: 0, endRadius: 680)
+            }
+            .ignoresSafeArea()
         )
         .task { model.start() }
         .onDisappear { model.stop() }
@@ -124,7 +131,7 @@ struct ContentView: View {
         }
         .foregroundStyle(Style.ink)
         .padding(.horizontal, 16).padding(.vertical, 10)
-        .background(RoundedRectangle(cornerRadius: 12).fill(LinearGradient(colors: [Style.headerTop, Style.headerBottom], startPoint: .top, endPoint: .bottom)))
+        .background(ClayShape(radius: 22))
     }
 
     // MARK: - Pieces
