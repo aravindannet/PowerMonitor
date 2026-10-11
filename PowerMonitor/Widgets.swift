@@ -1,11 +1,24 @@
 import SwiftUI
 
+/// A colour that follows the Mac's light or dark appearance.
+func adaptive(light: (CGFloat, CGFloat, CGFloat), dark: (CGFloat, CGFloat, CGFloat)) -> Color {
+    Color(nsColor: NSColor(name: nil) { appearance in
+        let isDark = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        let c = isDark ? dark : light
+        return NSColor(red: c.0, green: c.1, blue: c.2, alpha: 1)
+    })
+}
+
 /// Colours used across the app, matching the browser dashboard.
 enum Style {
-    static let panelTop = Color(red: 0.17, green: 0.19, blue: 0.22)
-    static let panelBottom = Color(red: 0.10, green: 0.11, blue: 0.14)
-    static let ink = Color(red: 0.85, green: 0.87, blue: 0.90)
-    static let muted = Color(red: 0.50, green: 0.53, blue: 0.58)
+    static let panelTop = adaptive(light: (0.98, 0.98, 0.99), dark: (0.17, 0.19, 0.22))
+    static let panelBottom = adaptive(light: (0.92, 0.93, 0.95), dark: (0.10, 0.11, 0.14))
+    static let windowTop = adaptive(light: (0.93, 0.94, 0.96), dark: (0.23, 0.25, 0.29))
+    static let windowBottom = adaptive(light: (0.85, 0.86, 0.90), dark: (0.14, 0.15, 0.18))
+    static let headerTop = adaptive(light: (0.99, 0.99, 1.00), dark: (0.29, 0.31, 0.36))
+    static let headerBottom = adaptive(light: (0.90, 0.91, 0.94), dark: (0.17, 0.19, 0.23))
+    static let ink = adaptive(light: (0.12, 0.13, 0.16), dark: (0.85, 0.87, 0.90))
+    static let muted = adaptive(light: (0.40, 0.43, 0.49), dark: (0.50, 0.53, 0.58))
     static let screen = Color(red: 0.03, green: 0.07, blue: 0.05)
     static let phosphor = Color(red: 0.36, green: 1.0, blue: 0.60)
     static let cpu = Color(red: 0.62, green: 0.55, blue: 1.0)

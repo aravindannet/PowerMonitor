@@ -103,7 +103,7 @@ struct ContentView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .frame(minWidth: 1100, minHeight: 880)
         .background(
-            LinearGradient(colors: [Color(red: 0.23, green: 0.25, blue: 0.29), Color(red: 0.14, green: 0.15, blue: 0.18)],
+            LinearGradient(colors: [Style.windowTop, Style.windowBottom],
                            startPoint: .topLeading, endPoint: .bottomTrailing)
         )
         .task { model.start() }
@@ -124,7 +124,7 @@ struct ContentView: View {
         }
         .foregroundStyle(Style.ink)
         .padding(.horizontal, 16).padding(.vertical, 10)
-        .background(RoundedRectangle(cornerRadius: 12).fill(LinearGradient(colors: [Color(white: 0.29), Color(white: 0.17)], startPoint: .top, endPoint: .bottom)))
+        .background(RoundedRectangle(cornerRadius: 12).fill(LinearGradient(colors: [Style.headerTop, Style.headerBottom], startPoint: .top, endPoint: .bottom)))
     }
 
     // MARK: - Pieces
