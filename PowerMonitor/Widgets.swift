@@ -56,6 +56,7 @@ struct Panel<Content: View>: View {
                 .foregroundStyle(Style.muted)
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
         }
         .padding(18)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

@@ -40,7 +40,7 @@ struct ContentView: View {
                     }
                 }
             }
-            .frame(height: 230)
+            .frame(height: 262)
 
             // Row 2: faders and cores
             HStack(spacing: 14) {
