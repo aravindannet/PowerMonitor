@@ -12,7 +12,7 @@ struct ContentView: View {
                 Panel(title: "Total power") {
                     VStack(spacing: 12) {
                         AnalogMeter(value: model.totalW, maxValue: 40)
-                            .frame(maxWidth: 340)
+                            .frame(maxWidth: 240)
                         Text(String(format: "%.1f W", model.totalW))
                             .font(.system(size: 26, weight: .heavy, design: .monospaced))
                             .foregroundStyle(Style.ink)
@@ -40,6 +40,7 @@ struct ContentView: View {
                     }
                 }
             }
+            .frame(height: 230)
 
             // Row 2: faders and cores
             HStack(spacing: 14) {
@@ -62,6 +63,7 @@ struct ContentView: View {
                     }
                 }
             }
+            .frame(maxHeight: .infinity)
 
             // Row 3: breakdown, frequencies, history
             HStack(spacing: 14) {
@@ -93,9 +95,11 @@ struct ContentView: View {
                 }
                 .frame(maxWidth: .infinity)
             }
+            .frame(height: 300)
         }
         .padding(18)
-        .frame(minWidth: 1100, minHeight: 760)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(minWidth: 1100, minHeight: 880)
         .background(
             LinearGradient(colors: [Color(red: 0.23, green: 0.25, blue: 0.29), Color(red: 0.14, green: 0.15, blue: 0.18)],
                            startPoint: .topLeading, endPoint: .bottomTrailing)

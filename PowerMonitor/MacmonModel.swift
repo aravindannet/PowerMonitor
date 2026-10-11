@@ -122,7 +122,7 @@ final class MacmonModel {
         status = "Live · macmon"
         appsTask = Task { [weak self] in
             while !Task.isCancelled {
-                let apps = await ProcessSampler.top(limit: 8)
+                let apps = await ProcessSampler.top(limit: 6)
                 self?.topApps = apps
                 try? await Task.sleep(for: .seconds(2))
             }

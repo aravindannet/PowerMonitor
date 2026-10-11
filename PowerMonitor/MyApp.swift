@@ -15,6 +15,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         WindowGroup {
             ContentView()
         }
-        .defaultSize(width: 1280, height: 860)
+        .defaultSize(width: 1280, height: 960)
     }
 }
