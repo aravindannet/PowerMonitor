@@ -85,8 +85,11 @@ struct ContentView: View {
                         Spacer(minLength: 0)
                     }
                 }
-                Panel(title: "Total draw, last 90 seconds") {
-                    HistoryScope(values: model.history, maxValue: 40)
+                Panel(title: "Top apps by CPU") {
+                    TopAppsList(apps: model.topApps)
+                }
+                Panel(title: "Draw by component, 90 s") {
+                    StackedHistory(samples: model.componentHistory, maxValue: 40)
                 }
                 .frame(maxWidth: .infinity)
             }

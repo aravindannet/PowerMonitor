@@ -46,6 +46,12 @@ nonisolated private let decoder: JSONDecoder = {
     return d
 }()
 
+/// Power draw by component at one moment, in watts.
+nonisolated struct ComponentSample: Equatable {
+    var cpu = 0.0, gpu = 0.0, ane = 0.0, ram = 0.0, other = 0.0
+    var total: Double { cpu + gpu + ane + ram + other }
+}
+
 /// Runs `macmon pipe` and publishes its readings for SwiftUI.
 @Observable
 @MainActor
@@ -74,13 +80,16 @@ final class MacmonModel {
     var fanRPM = 0
     var fanMaxRPM = 0
 
-    /// Combined CPU + GPU + ANE watts, last 90 seconds.
-    var history: [Double] = []
+    /// Power by component, last 90 seconds, for the stacked graph.
+    var componentHistory: [ComponentSample] = []
+    /// Busiest apps by CPU, refreshed every two seconds.
+    var topApps: [ProcessUsage] = []
 
     var totalW: Double { cpuW + gpuW + aneW }
     var otherW: Double { max(0, systemW - cpuW - gpuW - aneW - ramW) }
 
     private var process: Process?
+    private var appsTask: Task<Void, Never>?
 
     func start() {
         guard process == nil else { return }
@@ -111,6 +120,13 @@ final class MacmonModel {
         process = proc
         isLive = true
         status = "Live · macmon"
+        appsTask = Task { [weak self] in
+            while !Task.isCancelled {
+                let apps = await ProcessSampler.top(limit: 8)
+                self?.topApps = apps
+                try? await Task.sleep(for: .seconds(2))
+            }
+        }
 
         let handle = pipe.fileHandleForReading
         Task.detached {
@@ -129,6 +145,8 @@ final class MacmonModel {
     func stop() {
         process?.terminate()
         process = nil
+        appsTask?.cancel()
+        appsTask = nil
     }
 
     private func apply(_ s: MacmonSample) {
@@ -162,7 +180,7 @@ final class MacmonModel {
         fanRPM = s.fans?.first?.rpm ?? 0
         fanMaxRPM = s.fans?.first?.maxRpm ?? 0
 
-        history.append(totalW)
-        if history.count > 90 { history.removeFirst(history.count - 90) }
+        componentHistory.append(ComponentSample(cpu: cpuW, gpu: gpuW, ane: aneW, ram: ramW, other: otherW))
+        if componentHistory.count > 90 { componentHistory.removeFirst(componentHistory.count - 90) }
     }
 }

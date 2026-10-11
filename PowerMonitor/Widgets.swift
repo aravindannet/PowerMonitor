@@ -229,33 +229,106 @@ struct MeterBar: View {
     }
 }
 
-/// Phosphor-style line chart of recent power.
-struct HistoryScope: View {
-    let values: [Double]
+/// Stacked graph of power by component over time: what is drawing, and how much.
+struct StackedHistory: View {
+    let samples: [ComponentSample]
     let maxValue: Double
 
-    var body: some View {
-        Canvas { ctx, size in
-            // Graticule
-            var grid = Path()
-            for i in 1..<8 { grid.move(to: CGPoint(x: 0, y: size.height * CGFloat(i) / 8)); grid.addLine(to: CGPoint(x: size.width, y: size.height * CGFloat(i) / 8)) }
-            for i in 1..<12 { grid.move(to: CGPoint(x: size.width * CGFloat(i) / 12, y: 0)); grid.addLine(to: CGPoint(x: size.width * CGFloat(i) / 12, y: size.height)) }
-            ctx.stroke(grid, with: .color(Style.phosphor.opacity(0.12)), lineWidth: 1)
+    private let layers: [(name: String, colour: Color, value: (ComponentSample) -> Double)] = [
+        ("CPU", Style.cpu, { $0.cpu }),
+        ("GPU", Style.gpu, { $0.gpu }),
+        ("ANE", Style.ane, { $0.ane }),
+        ("RAM", Style.ram, { $0.ram }),
+        ("Other", Color(white: 0.45), { $0.other }),
+    ]
 
-            guard values.count > 1 else { return }
-            var line = Path()
-            for (i, v) in values.enumerated() {
-                let x = size.width * CGFloat(i) / CGFloat(values.count - 1)
-                let y = size.height - 8 - (size.height - 16) * CGFloat(min(v, maxValue) / maxValue)
-                if i == 0 { line.move(to: CGPoint(x: x, y: y)) } else { line.addLine(to: CGPoint(x: x, y: y)) }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Canvas { ctx, size in
+                // Graticule
+                var grid = Path()
+                for i in 1..<4 {
+                    let y = size.height * CGFloat(i) / 4
+                    grid.move(to: CGPoint(x: 0, y: y)); grid.addLine(to: CGPoint(x: size.width, y: y))
+                }
+                ctx.stroke(grid, with: .color(.white.opacity(0.08)), lineWidth: 1)
+
+                guard samples.count > 1 else { return }
+                let n = samples.count
+                func point(_ i: Int, _ watts: Double) -> CGPoint {
+                    CGPoint(x: size.width * CGFloat(i) / CGFloat(n - 1),
+                            y: size.height - (size.height * CGFloat(min(watts, maxValue) / maxValue)))
+                }
+                // Stack each layer on top of the ones below it
+                var base = [Double](repeating: 0, count: n)
+                for layer in layers {
+                    var top = base
+                    for i in 0..<n { top[i] = base[i] + layer.value(samples[i]) }
+                    var path = Path()
+                    for i in 0..<n {
+                        let p = point(i, top[i])
+                        if i == 0 { path.move(to: p) } else { path.addLine(to: p) }
+                    }
+                    for i in (0..<n).reversed() { path.addLine(to: point(i, base[i])) }
+                    path.closeSubpath()
+                    ctx.fill(path, with: .color(layer.colour.opacity(0.85)))
+                    base = top
+                }
             }
-            ctx.drawLayer { layer in
-                layer.addFilter(.shadow(color: Style.phosphor, radius: 6))
-                layer.stroke(line, with: .color(Style.phosphor), style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(RoundedRectangle(cornerRadius: 10).fill(Style.screen))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+
+            // Current watts per component
+            let latest = samples.last ?? ComponentSample()
+            ForEach(layers, id: \.name) { layer in
+                HStack(spacing: 6) {
+                    RoundedRectangle(cornerRadius: 2).fill(layer.colour).frame(width: 9, height: 9)
+                    Text(layer.name)
+                        .font(.system(size: 11, design: .monospaced)).foregroundStyle(Style.muted)
+                    Spacer()
+                    Text(String(format: "%.2f W", layer.value(latest)))
+                        .font(.system(size: 12, weight: .bold, design: .monospaced)).foregroundStyle(Style.ink)
+                        .monospacedDigit()
+                }
             }
         }
-        .background(RoundedRectangle(cornerRadius: 10).fill(Style.screen))
-        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.black, lineWidth: 1))
+    }
+}
+
+/// The apps using the most CPU right now, with memory.
+struct TopAppsList: View {
+    let apps: [ProcessUsage]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            if apps.isEmpty {
+                Text("Reading processes…")
+                    .font(.system(size: 11, design: .monospaced)).foregroundStyle(Style.muted)
+            }
+            let top = max(1, apps.map(\.cpu).max() ?? 1)
+            ForEach(apps) { app in
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack {
+                        Text(app.id)
+                            .font(.system(size: 11, design: .monospaced)).foregroundStyle(Style.ink)
+                            .lineLimit(1).truncationMode(.tail)
+                        Spacer()
+                        Text(String(format: "%.0f%% CPU", app.cpu))
+                            .font(.system(size: 11, weight: .bold, design: .monospaced)).foregroundStyle(Style.ink)
+                    }
+                    HStack(spacing: 8) {
+                        MeterBar(fraction: app.cpu / top, colour: Style.perf)
+                        Text(app.memMB >= 1024 ? String(format: "%.1f GB", app.memMB / 1024) : String(format: "%.0f MB", app.memMB))
+                            .font(.system(size: 10, design: .monospaced)).foregroundStyle(Style.muted)
+                            .frame(width: 58, alignment: .trailing)
+                    }
+                }
+            }
+            Spacer(minLength: 0)
+            Text("GPU use by app needs admin rights, so it isn't shown.")
+                .font(.system(size: 9, design: .monospaced)).foregroundStyle(Style.muted)
+        }
     }
 }
 
