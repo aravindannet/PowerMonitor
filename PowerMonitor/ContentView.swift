@@ -74,6 +74,8 @@ struct ContentView: View {
                             .foregroundStyle(Style.ink)
                         powerStack
                         legend
+                        fanRow
+                            .padding(.top, 6)
                         Spacer(minLength: 0)
                     }
                 }
@@ -190,6 +192,19 @@ struct ContentView: View {
         }
         .font(.system(size: 11, design: .monospaced))
         .foregroundStyle(Style.muted)
+    }
+
+    private var fanRow: some View {
+        HStack(spacing: 10) {
+            Text("FAN")
+                .font(.system(size: 11, design: .monospaced)).foregroundStyle(Style.muted)
+                .frame(width: 40, alignment: .leading)
+            MeterBar(fraction: model.fanMaxRPM > 0 ? Double(model.fanRPM) / Double(model.fanMaxRPM) : 0,
+                     colour: Style.ane)
+            Text(model.fanRPM > 0 ? "\(model.fanRPM) rpm" : "--")
+                .font(.system(size: 12, weight: .bold, design: .monospaced)).foregroundStyle(Style.ink)
+                .frame(width: 84, alignment: .trailing)
+        }
     }
 
     private func legendItem(_ name: String, _ watts: Double, _ colour: Color) -> some View {
