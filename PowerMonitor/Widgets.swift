@@ -321,6 +321,7 @@ struct StackedHistory: View {
 /// The apps using the most CPU right now, with memory.
 struct TopAppsList: View {
     let apps: [ProcessUsage]
+    @State private var toQuit: ProcessUsage?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
@@ -336,6 +337,14 @@ struct TopAppsList: View {
                             .font(.system(size: 11, design: .monospaced)).foregroundStyle(Style.ink)
                             .lineLimit(1).truncationMode(.tail)
                         Spacer()
+                        if AppQuitter.regularApp(named: app.id) != nil {
+                            Button("Quit") { toQuit = app }
+                                .buttonStyle(.plain)
+                                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Style.red)
+                                .padding(.horizontal, 6).padding(.vertical, 2)
+                                .background(RoundedRectangle(cornerRadius: 5).fill(Style.red.opacity(0.12)))
+                        }
                         Text(String(format: "%.0f%% CPU", app.cpu))
                             .font(.system(size: 11, weight: .bold, design: .monospaced)).foregroundStyle(Style.ink)
                     }
@@ -350,6 +359,17 @@ struct TopAppsList: View {
             Spacer(minLength: 0)
             Text("GPU use by app needs admin rights, so it isn't shown.")
                 .font(.system(size: 9, design: .monospaced)).foregroundStyle(Style.muted)
+        }
+        .confirmationDialog("Quit \(toQuit?.id ?? "this app")?",
+                            isPresented: Binding(get: { toQuit != nil }, set: { if !$0 { toQuit = nil } }),
+                            titleVisibility: .visible) {
+            Button("Quit \(toQuit?.id ?? "")", role: .destructive) {
+                if let app = toQuit { AppQuitter.quit(named: app.id) }
+                toQuit = nil
+            }
+            Button("Cancel", role: .cancel) { toQuit = nil }
+        } message: {
+            Text("Quitting frees its memory. The app may ask you to save unsaved work first.")
         }
     }
 }

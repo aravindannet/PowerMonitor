@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 
 /// One app's share of the CPU and memory, summed over its helper processes.
 nonisolated struct ProcessUsage: Identifiable, Equatable {
@@ -44,5 +45,23 @@ nonisolated enum ProcessSampler {
             return String(bundle.dropLast(4))
         }
         return path.split(separator: "/").last.map(String.init) ?? path
+    }
+}
+
+/// Quits a running app politely, the same as choosing Quit from its menu.
+/// The app can still ask to save unsaved work before it closes.
+enum AppQuitter {
+    @MainActor
+    static func regularApp(named name: String) -> NSRunningApplication? {
+        guard name != "PowerMonitor" else { return nil }
+        // Match on the bundle file name (e.g. "iTerm.app"), since macOS's display name can differ.
+        return NSWorkspace.shared.runningApplications.first {
+            $0.activationPolicy == .regular && $0.bundleURL?.lastPathComponent == "\(name).app"
+        }
+    }
+
+    @MainActor
+    static func quit(named name: String) {
+        regularApp(named: name)?.terminate()
     }
 }
