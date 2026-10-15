@@ -127,7 +127,6 @@ struct AnalogMeter: View {
                     .position(pivot)
             }
         }
-        .aspectRatio(2.0, contentMode: .fit)
         .shadow(color: .black.opacity(0.5), radius: 8, y: 5)
     }
 
@@ -138,30 +137,6 @@ struct AnalogMeter: View {
 
     private func angleRad(_ v: Double) -> Double {
         angleDeg(v) * .pi / 180
-    }
-}
-
-/// Rotary knob. `fraction` 0...1 turns the pointer across a 270° sweep.
-struct Knob: View {
-    let fraction: Double
-    let colour: Color
-
-    var body: some View {
-        ZStack {
-            Circle().fill(Color.black.opacity(0.001))
-            Circle()
-                .fill(RadialGradient(colors: [Color(white: 0.45), Color(white: 0.18), Color(white: 0.08)],
-                                     center: UnitPoint(x: 0.38, y: 0.32), startRadius: 2, endRadius: 60))
-                .overlay(Circle().strokeBorder(Color(white: 0.02), lineWidth: 4))
-                .shadow(color: .black.opacity(0.6), radius: 8, y: 6)
-            Capsule()
-                .fill(colour)
-                .frame(width: 4, height: 30)
-                .shadow(color: colour, radius: 5)
-                .offset(y: -22)
-                .rotationEffect(.degrees(-135 + 270 * min(1, max(0, fraction))))
-                .animation(.spring(response: 0.6, dampingFraction: 0.8), value: fraction)
-        }
     }
 }
 

@@ -1,5 +1,15 @@
 import Foundation
+import IOKit
 import Observation
+
+/// GPU core count from the GPU driver's registry entry, or nil if it can't be read.
+nonisolated func gpuCoreCount() -> Int? {
+    let service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("AGXAccelerator"))
+    guard service != 0 else { return nil }
+    defer { IOObjectRelease(service) }
+    let value = IORegistryEntryCreateCFProperty(service, "gpu-core-count" as CFString, kCFAllocatorDefault, 0)
+    return (value?.takeRetainedValue() as? NSNumber)?.intValue
+}
 
 /// One CPU core as reported by macmon.
 struct CoreReading: Identifiable, Equatable {
@@ -60,6 +70,8 @@ final class MacmonModel {
     var isLive = false
 
     var cores: [CoreReading] = []
+    /// GPU cores on this Mac, read once at launch. Zero if unknown.
+    var gpuCores = 0
     var eActive = 0.0
     var pActive = 0.0
     var gpuActive = 0.0
@@ -119,6 +131,7 @@ final class MacmonModel {
         }
         process = proc
         isLive = true
+        gpuCores = gpuCoreCount() ?? 0
         status = "Live · macmon"
         appsTask = Task { [weak self] in
             while !Task.isCancelled {

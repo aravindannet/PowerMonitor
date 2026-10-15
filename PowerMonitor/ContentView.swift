@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var model = MacmonModel()
+    let model: MacmonModel
 
     var body: some View {
         VStack(spacing: 14) {
@@ -10,26 +10,19 @@ struct ContentView: View {
             // Row 1: power, load, readouts
             HStack(spacing: 14) {
                 Panel(title: "Total power") {
-                    VStack(spacing: 12) {
-                        AnalogMeter(value: model.totalW, maxValue: 40)
-                            .frame(maxWidth: 240)
-                        Text(String(format: "%.1f W", model.totalW))
-                            .font(.system(size: 26, weight: .heavy, design: .monospaced))
-                            .foregroundStyle(Style.ink)
-                        Text("combined CPU + GPU + ANE")
-                            .font(.system(size: 11, design: .monospaced))
-                            .foregroundStyle(Style.muted)
-                    }
-                }
-                Panel(title: "Load") {
-                    HStack(spacing: 8) {
-                        knobColumn(fraction: model.cpuW / 40, colour: Style.cpu,
-                                   value: String(format: "%.1f", model.cpuW), name: "CPU W")
-                        knobColumn(fraction: model.gpuActive / 100, colour: Style.gpu,
-                                   value: String(format: "%.0f%%", model.gpuActive), name: "GPU")
-                        knobColumn(fraction: model.aneW / 40, colour: Style.ane,
-                                   value: String(format: "%.1f", model.aneW), name: "ANE W")
-                    }
+                    AnalogMeter(value: model.totalW, maxValue: 40)
+                        .overlay(alignment: .bottomLeading) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(String(format: "%.1f W", model.totalW))
+                                    .font(.system(size: 26, weight: .heavy, design: .monospaced))
+                                    .foregroundStyle(Color(red: 0.23, green: 0.18, blue: 0.06))
+                                Text("combined CPU + GPU + ANE")
+                                    .font(.system(size: 11, design: .monospaced))
+                                    .foregroundStyle(Color(red: 0.23, green: 0.18, blue: 0.06).opacity(0.7))
+                            }
+                            .padding(.leading, 10)
+                            .padding(.bottom, 6)
+                        }
                 }
                 Panel(title: "Readouts") {
                     VStack(spacing: 10) {
@@ -44,22 +37,36 @@ struct ContentView: View {
 
             // Row 2: faders and cores
             HStack(spacing: 14) {
-                Panel(title: "Cluster faders") {
-                    HStack(alignment: .bottom, spacing: 18) {
-                        faderColumn(fraction: model.eActive / 100, colour: Style.eff,
-                                    value: String(format: "%.0f%%", model.eActive), name: "EFFICIENCY")
-                        faderColumn(fraction: model.pActive / 100, colour: Style.perf,
-                                    value: String(format: "%.0f%%", model.pActive), name: "PERFORMANCE")
-                        faderColumn(fraction: model.gpuActive / 100, colour: Style.gpu,
-                                    value: String(format: "%.0f%%", model.gpuActive), name: "GPU")
+                Panel(title: "Cluster faders & load") {
+                    HStack(alignment: .bottom, spacing: 0) {
+                        HStack(alignment: .bottom, spacing: 14) {
+                            faderColumn(fraction: model.eActive / 100, colour: Style.eff,
+                                        value: String(format: "%.0f%%", model.eActive), name: "EFFICIENCY")
+                            faderColumn(fraction: model.pActive / 100, colour: Style.perf,
+                                        value: String(format: "%.0f%%", model.pActive), name: "PERFORM.")
+                            faderColumn(fraction: model.gpuActive / 100, colour: Style.gpu,
+                                        value: String(format: "%.0f%%", model.gpuActive), name: "GPU")
+                        }
+                        Rectangle().fill(Style.muted.opacity(0.3)).frame(width: 1).padding(.horizontal, 14)
+                        HStack(alignment: .bottom, spacing: 14) {
+                            faderColumn(fraction: model.cpuW / 40, colour: Style.cpu,
+                                        value: String(format: "%.1f", model.cpuW), name: "CPU W")
+                            faderColumn(fraction: model.gpuActive / 100, colour: Style.gpu,
+                                        value: String(format: "%.0f%%", model.gpuActive), name: "GPU")
+                            faderColumn(fraction: model.aneW / 40, colour: Style.ane,
+                                        value: String(format: "%.1f", model.aneW), name: "ANE W")
+                        }
                     }
                 }
-                .frame(maxWidth: 360)
+                .frame(maxWidth: 500)
 
                 Panel(title: "Cores") {
-                    HStack(alignment: .top, spacing: 24) {
-                        coreGroup(title: "Efficiency", prefix: "E", colour: Style.eff)
-                        coreGroup(title: "Performance", prefix: "P", colour: Style.perf)
+                    VStack(alignment: .leading, spacing: 14) {
+                        HStack(alignment: .top, spacing: 24) {
+                            coreGroup(title: "Efficiency", prefix: "E", colour: Style.eff)
+                            coreGroup(title: "Performance", prefix: "P", colour: Style.perf)
+                        }
+                        gpuGroup
                     }
                 }
             }
@@ -103,7 +110,7 @@ struct ContentView: View {
         .padding(.top, 18)
         .padding(.bottom, 36)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .frame(minWidth: 1100, minHeight: 880)
+        .frame(minWidth: 1100, minHeight: 1100)
         .background(
             ZStack {
                 LinearGradient(colors: [Style.windowTop, Style.windowBottom],
@@ -115,8 +122,6 @@ struct ContentView: View {
             }
             .ignoresSafeArea()
         )
-        .task { model.start() }
-        .onDisappear { model.stop() }
     }
 
     // MARK: - Header
@@ -137,15 +142,6 @@ struct ContentView: View {
     }
 
     // MARK: - Pieces
-
-    private func knobColumn(fraction: Double, colour: Color, value: String, name: String) -> some View {
-        VStack(spacing: 8) {
-            Knob(fraction: fraction, colour: colour).frame(width: 96, height: 96)
-            Text(value).font(.system(size: 18, weight: .bold, design: .monospaced)).foregroundStyle(Style.ink)
-            Text(name).font(.system(size: 10, design: .monospaced)).foregroundStyle(Style.muted)
-        }
-        .frame(maxWidth: .infinity)
-    }
 
     private func faderColumn(fraction: Double, colour: Color, value: String, name: String) -> some View {
         VStack(spacing: 8) {
@@ -171,6 +167,41 @@ struct ContentView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
+
+    /// One lamp per GPU core. macmon reports a single GPU load, so the lit
+    /// count is that load spread evenly across the cores, not per-core readings.
+    private var gpuGroup: some View {
+        let lit = Int((model.gpuActive / 100 * Double(model.gpuCores)).rounded())
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Text("GPU · \(model.gpuCores) CORES")
+                    .font(.system(size: 10, weight: .heavy, design: .monospaced))
+                    .padding(.horizontal, 8).padding(.vertical, 3)
+                    .background(RoundedRectangle(cornerRadius: 5).fill(Color(white: 0.8)))
+                    .foregroundStyle(.black)
+                Text("\(Int(model.gpuActive.rounded()))% total")
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Style.ink)
+            }
+            HStack(spacing: 4) {
+                ForEach(0..<model.gpuCores, id: \.self) { i in
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(i < lit ? Style.gpu : Color(red: 0.16, green: 0.10, blue: 0.10))
+                        .shadow(color: i < lit ? Style.gpu : .clear, radius: 3)
+                }
+            }
+            .padding(6)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(RoundedRectangle(cornerRadius: 8).fill(Color.black))
+            .animation(.easeOut(duration: 0.3), value: lit)
+            .frame(minHeight: 56)
+            Text("Lit cells = GPU load spread across cores. macmon reports one GPU total, not per core.")
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundStyle(Style.muted)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     private var powerStack: some View {
@@ -249,5 +280,5 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
+    ContentView(model: MacmonModel())
 }
